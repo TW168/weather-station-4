@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>PWS · {{ station_id }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+/* ── RESET & VARIABLES ───────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:          #e8f4fb;
+  --bg2:         #d0eaf8;
+  --bg3:         #b8ddf5;
+  --card:        rgba(255,255,255,0.85);
+  --border:      rgba(100,160,220,0.25);
+  --glow:        rgba(56,155,220,0.2);
+  --accent:      #1d7fbd;
+  --accent2:     #2596d1;
+  --warn:        #d97706;
+  --danger:      #dc2626;
+  --success:     #059669;
+  --text:        #0f2a45;
+  --text-muted:  #4a7fa8;
+  --text-dim:    #8ab0cc;
+  --font-mono:   'Space Mono', monospace;
+  --font-cond:   'Barlow Condensed', sans-serif;
+  --font-body:   'Barlow', sans-serif;
+  --r:           12px;
+}
+
+html{scroll-behavior:smooth}
+body{
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── ATMOSPHERIC SKY BACKGROUND ──────────────────────────────────────── */
+.sky{
+  position:fixed;inset:0;z-index:0;
+  background:linear-gradient(180deg,
+    #c8e8f8 0%,
+    #d8eff9 35%,
+    #e8f4fb 70%,
+    #f0f8fd 100%
+  );
+}
+.clouds{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.cloud-blob{
+  position:absolute;border-radius:50%;
+  filter:blur(70px);
+  animation:cloud-drift linear infinite;
+}
+@keyframes cloud-drift{
+  from{transform:translateX(-350px)}
+  to{transform:translateX(calc(100vw + 350px))}
+}
+
+/* ── LAYOUT ──────────────────────────────────────────────────────────── */
+#app{position:relative;z-index:1;max-width:1440px;margin:0 auto;padding:24px 20px 60px}
+
+/* ── HEADER ──────────────────────────────────────────────────────────── */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 4px 28px;border-bottom:1px solid var(--border);
+  margin-bottom:28px;
+}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{
+  width:42px;height:42px;
+  background:linear-gradient(135deg,var(--accent2),var(--accent));
+  border-radius:10px;display:grid;place-items:center;font-size:22px;
+  box-shadow:0 0 20px var(--glow);
+}
+.logo-text{
+  font-family:var(--font-cond);font-size:22px;font-weight:700;letter-spacing:.05em;
+  color:var(--text);
+}
+.logo-sub{
+  font-size:11px;color:var(--text-muted);letter-spacing:.12em;text-transform:uppercase;
+  font-family:var(--font-mono);
+}
+.header-right{display:flex;align-items:center;gap:16px}
+#clock{font-family:var(--font-mono);font-size:13px;color:var(--text-muted)}
+#status-dot{
+  width:8px;height:8px;border-radius:50%;background:var(--success);
+  box-shadow:0 0 6px var(--success);animation:pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
+
+.range-selector{display:flex;gap:6px}
+.range-btn{
+  font-family:var(--font-mono);font-size:11px;padding:5px 12px;
+  border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.6);
+  color:var(--text-muted);cursor:pointer;transition:.2s;letter-spacing:.06em;
+}
+.range-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(255,255,255,0.9)}
+.range-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+
+/* ── HERO ROW ────────────────────────────────────────────────────────── */
+.hero{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:16px;
+  margin-bottom:16px;
+}
+@media(max-width:900px){.hero{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.hero{grid-template-columns:1fr}}
+
+/* ── TEMPERATURE CARD (big) ──────────────────────────────────────────── */
+.card-temp{
+  grid-row:span 2;
+  background:rgba(255,255,255,0.85);
+  border:1px solid var(--border);border-radius:var(--r);
+  padding:28px 24px;
+  display:flex;flex-direction:column;justify-content:space-between;
+  position:relative;overflow:hidden;
+  box-shadow:0 2px 12px rgba(29,127,189,.1);
+}
+.card-temp::before{
+  content:'';position:absolute;top:-60px;right:-60px;
+  width:200px;height:200px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.12) 0%,transparent 70%);
+  pointer-events:none;
+}
+.temp-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.15em;color:var(--text-muted);text-transform:uppercase}
+.temp-value{
+  font-family:var(--font-cond);font-size:96px;font-weight:700;line-height:1;
+  color:var(--text);
+  text-shadow:none;
+}
+.temp-unit{font-size:36px;font-weight:400;color:var(--text-muted)}
+.temp-feels{font-size:15px;color:var(--text-muted);margin-top:4px}
+.temp-feels span{color:var(--accent)}
+.temp-dewpt{font-size:14px;color:var(--text-muted);margin-top:2px}
+.temp-minmax{
+  display:flex;gap:20px;padding-top:16px;border-top:1px solid var(--border);
+  font-family:var(--font-mono);font-size:13px;
+}
+.mm-item{display:flex;flex-direction:column;gap:2px}
+.mm-lbl{font-size:11px;color:var(--text-muted);letter-spacing:.1em}
+.mm-val{color:var(--text);font-weight:600}
+.mm-val.hot{color:#dc2626}
+.mm-val.cool{color:#1d7fbd}
+
+/* ── STANDARD METRIC CARD ────────────────────────────────────────────── */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);border-radius:var(--r);
+  padding:20px 20px 16px;
+  display:flex;flex-direction:column;
+  position:relative;overflow:hidden;
+  transition:border-color .25s, box-shadow .25s;
+  box-shadow:0 2px 12px rgba(29,127,189,.1);
+}
+.card:hover{border-color:rgba(29,127,189,.4);box-shadow:0 4px 20px rgba(29,127,189,.15)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.card-icon{font-size:20px;opacity:.7}
+.card-title{font-family:var(--font-mono);font-size:12px;letter-spacing:.12em;color:var(--text-muted);text-transform:uppercase}
+.card-value{font-family:var(--font-cond);font-size:52px;font-weight:600;line-height:1;color:var(--text)}
+.card-unit{font-size:20px;font-weight:300;color:var(--text-muted);margin-left:4px}
+.card-sub{font-size:14px;color:var(--text-muted);margin-top:6px}
+.card-sub span{color:var(--accent)}
+
+/* ── WIND DIRECTION COMPASS ──────────────────────────────────────────── */
+.compass{
+  width:56px;height:56px;border-radius:50%;
+  border:2px solid var(--border);
+  position:relative;display:grid;place-items:center;
+  flex-shrink:0;
+}
+.compass-needle{
+  position:absolute;width:2px;height:22px;
+  background:linear-gradient(to bottom,var(--danger) 40%,var(--text-dim) 40%);
+  border-radius:1px;transform-origin:bottom center;
+  transition:transform .6s cubic-bezier(.34,1.56,.64,1);
+  bottom:50%;left:50%;
+  transform:translateX(-50%);
+}
+.compass-center{
+  position:absolute;width:6px;height:6px;border-radius:50%;
+  background:var(--accent);z-index:2;
+}
+.compass-labels{position:absolute;inset:0;pointer-events:none}
+.cl{position:absolute;font-size:8px;font-family:var(--font-mono);color:var(--text-dim)}
+.cl.N{top:2px;left:50%;transform:translateX(-50%)}
+.cl.S{bottom:2px;left:50%;transform:translateX(-50%)}
+.cl.E{right:3px;top:50%;transform:translateY(-50%)}
+.cl.W{left:3px;top:50%;transform:translateY(-50%)}
+
+/* ── GAUGE BAR ───────────────────────────────────────────────────────── */
+.gauge-bar{height:4px;border-radius:2px;background:rgba(29,127,189,.12);margin-top:10px;overflow:hidden}
+.gauge-fill{height:100%;border-radius:2px;transition:width .8s ease;background:linear-gradient(90deg,var(--accent2),var(--accent))}
+
+/* ── PRESSURE TREND ARROW ────────────────────────────────────────────── */
+.trend-arrow{display:inline-block;font-size:18px;margin-left:6px}
+.trend-up{color:var(--success)}
+.trend-down{color:var(--danger)}
+.trend-steady{color:var(--warn)}
+
+/* ── UV INDEX BAR ────────────────────────────────────────────────────── */
+.uv-bar{
+  height:6px;border-radius:3px;margin-top:10px;overflow:hidden;
+  background:linear-gradient(90deg,#10b981,#f59e0b,#ef4444,#8b5cf6);
+}
+.uv-cursor{
+  width:10px;height:10px;border-radius:50%;
+  border:2px solid #fff;background:rgba(0,0,0,.6);
+  position:relative;top:-2px;margin-left:-5px;
+  transition:left .8s ease;
+}
+
+/* ── RAIN PREDICTION CARD (full-width) ───────────────────────────────── */
+.rain-card-full{
+  background:rgba(255,255,255,0.88);
+  border:1px solid rgba(29,127,189,0.2);
+  border-radius:var(--r);padding:28px;margin-bottom:20px;
+  box-shadow:0 4px 20px rgba(29,127,189,.12),inset 0 1px 0 rgba(255,255,255,.8);
+  position:relative;overflow:hidden;
+}
+.rain-card-full::before{
+  content:'';position:absolute;top:-100px;right:-100px;
+  width:350px;height:350px;border-radius:50%;
+  background:radial-gradient(circle,rgba(29,127,189,.05) 0%,transparent 70%);
+  pointer-events:none;
+}
+.rain-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.rain-top-title{font-family:var(--font-mono);font-size:11px;letter-spacing:.15em;color:var(--text-muted);text-transform:uppercase}
+.rain-confidence-badge{
+  font-family:var(--font-mono);font-size:10px;padding:4px 12px;
+  border-radius:20px;border:1px solid var(--border);
+  color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;
+}
+.rain-body{display:grid;grid-template-columns:200px 1fr;gap:36px;align-items:start}
+@media(max-width:700px){.rain-body{grid-template-columns:1fr}}
+.rain-main{display:flex;flex-direction:column;align-items:center;gap:12px}
+.rain-gauge{
+  width:160px;height:160px;border-radius:50%;
+  display:grid;place-items:center;position:relative;
+  background:conic-gradient(var(--rain-color,#1d7fbd) var(--rain-pct,0%), #c8dff0 0%);
+}
+.rain-gauge::after{
+  content:'';position:absolute;inset:16px;border-radius:50%;
+  background:#f0f8fd;
+}
+.rain-pct{position:relative;z-index:1;font-family:var(--font-cond);font-size:44px;font-weight:700;color:var(--text);line-height:1}
+.rain-label{font-family:var(--font-cond);font-size:30px;font-weight:700;text-align:center}
+.rain-sublabel{font-size:14px;color:var(--text-muted);text-align:center}
+.rain-explanation{display:flex;flex-direction:column;gap:16px}
+.rain-explain-title{font-family:var(--font-mono);font-size:12px;letter-spacing:.12em;color:var(--text-muted);text-transform:uppercase}
+.rain-explain-desc{font-size:14px;color:var(--text-muted);line-height:1.7}
+.rain-factors{display:flex;flex-direction:column;gap:14px}
+.rain-factor-row{display:grid;grid-template-columns:26px 1fr 80px;gap:12px;align-items:start}
+.rain-factor-icon{font-size:18px;line-height:1.4}
+.rain-factor-body{display:flex;flex-direction:column;gap:4px}
+.rain-factor-name{font-size:15px;color:var(--text);font-weight:600}
+.rain-factor-measured{font-family:var(--font-mono);font-size:12px;color:var(--accent);margin-left:8px}
+.rain-factor-explain{font-size:13px;color:var(--text-muted);line-height:1.5}
+.rain-factor-bar-bg{height:5px;border-radius:3px;background:#c8dff0;overflow:hidden;margin-top:6px}
+.rain-factor-bar-fill{height:100%;border-radius:3px;transition:width .9s ease}
+.rain-factor-score{font-family:var(--font-mono);font-size:12px;color:var(--text-muted);text-align:right;padding-top:3px;font-weight:600}
+.rain-methodology{
+  margin-top:22px;padding-top:16px;border-top:1px solid rgba(29,127,189,.15);
+  font-size:13px;color:var(--text-muted);line-height:1.8;
+}
+.rain-methodology strong{color:var(--text)}
+
+/* ── GRID SECTION ────────────────────────────────────────────────────── */
+.metrics-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:16px;
+  margin-bottom:20px;
+}
+
+/* ── CHARTS ──────────────────────────────────────────────────────────── */
+.charts-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  margin-bottom:20px;
+}
+@media(max-width:800px){.charts-grid{grid-template-columns:1fr}}
+
+.chart-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:20px;
+  box-shadow:0 2px 12px rgba(29,127,189,.1);
+}
+.chart-title{
+  font-family:var(--font-mono);font-size:13px;letter-spacing:.1em;
+  color:var(--text-muted);text-transform:uppercase;margin-bottom:16px;
+}
+.chart-wrap{position:relative;height:180px}
+
+/* ── STATS BAR ───────────────────────────────────────────────────────── */
+.stats-bar{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:16px 24px;
+  display:flex;flex-wrap:wrap;gap:0;
+  margin-bottom:20px;
+}
+.stat-item{
+  flex:1;min-width:120px;padding:8px 20px;
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;gap:3px;
+}
+.stat-item:last-child{border-right:none}
+.stat-lbl{font-size:12px;font-family:var(--font-mono);letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase}
+.stat-val{font-family:var(--font-cond);font-size:30px;font-weight:600;color:var(--text)}
+.stat-unit{font-size:15px;color:var(--text-muted)}
+
+/* ── FOOTER ──────────────────────────────────────────────────────────── */
+footer{
+  text-align:center;padding-top:24px;border-top:1px solid var(--border);
+  font-size:11px;color:var(--text-dim);font-family:var(--font-mono);letter-spacing:.08em;
+}
+#last-updated{color:var(--text-muted)}
+
+/* ── LOADING STATE ───────────────────────────────────────────────────── */
+.skeleton{
+  background:linear-gradient(90deg,rgba(29,127,189,.06) 25%,rgba(29,127,189,.12) 50%,rgba(29,127,189,.06) 75%);
+  background-size:200% 100%;
+  animation:shimmer 1.5s infinite;
+  border-radius:4px;color:transparent!important;
+}
+@keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
+
+/* ── TOOLTIP ─────────────────────────────────────────────────────────── */
+.tooltip-custom{
+  background:rgba(255,255,255,.97)!important;
+  border:1px solid var(--border)!important;
+  border-radius:8px!important;padding:10px 14px!important;
+  font-family:var(--font-mono)!important;font-size:11px!important;
+  color:var(--text)!important;
+}
+</style>
+</head>
+<body>
+
+<!-- Animated background -->
+<div class="sky"></div>
+<div class="clouds" id="clouds"></div>
+
+<div id="app">
+  <!-- ── HEADER ── -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🌦</div>
+      <div>
+        <div class="logo-text">PWS OBSERVER</div>
+        <div class="logo-sub">{{ station_id }} · Spring, TX</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div id="status-dot"></div>
+      <div id="clock">--:--:-- --</div>
+      <div class="range-selector">
+        <button class="range-btn active" data-h="24">24H</button>
+        <button class="range-btn" data-h="48">48H</button>
+        <button class="range-btn" data-h="168">7D</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── HERO CARDS ── -->
+  <div class="hero">
+    <!-- Temperature (tall card) -->
+    <div class="card card-temp" id="card-temp">
+      <div>
+        <div class="temp-label">Temperature</div>
+        <div class="temp-value" id="val-temp">--<span class="temp-unit">°F</span></div>
+        <div class="temp-feels">Feels like <span id="val-feels">--</span>°F</div>
+        <div class="temp-dewpt">Dew point: <span id="val-dewpt">--</span>°F</div>
+      </div>
+      <div class="temp-minmax">
+        <div class="mm-item"><span class="mm-lbl">24H High</span><span class="mm-val hot" id="val-hi">--°</span></div>
+        <div class="mm-item"><span class="mm-lbl">24H Low</span><span class="mm-val cool" id="val-lo">--°</span></div>
+        <div class="mm-item"><span class="mm-lbl">Avg</span><span class="mm-val" id="val-avg">--°</span></div>
+        <div class="mm-item"><span class="mm-lbl">Obs</span><span class="mm-val" id="val-obs">--</span></div>
+      </div>
+    </div>
+
+    <!-- Humidity -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Humidity</div>
+        <div class="card-icon">💧</div>
+      </div>
+      <div class="card-value" id="val-hum">--<span class="card-unit">%</span></div>
+      <div class="card-sub">Max today: <span id="val-hum-max">--%</span></div>
+      <div class="gauge-bar"><div class="gauge-fill" id="gauge-hum" style="width:0%"></div></div>
+    </div>
+
+    <!-- Wind -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Wind</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div id="val-wind-dir-text" style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">--</div>
+          <div class="compass" id="compass">
+            <div class="compass-labels">
+              <span class="cl N">N</span><span class="cl S">S</span>
+              <span class="cl E">E</span><span class="cl W">W</span>
+            </div>
+            <div class="compass-needle" id="compass-needle"></div>
+            <div class="compass-center"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card-value" id="val-wind">--<span class="card-unit">mph</span></div>
+      <div class="card-sub">Gust: <span id="val-gust">-- mph</span></div>
+    </div>
+
+    <!-- Pressure -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Pressure</div>
+        <div class="card-icon">🌡</div>
+      </div>
+      <div class="card-value">
+        <span id="val-pres">--</span><span class="card-unit">inHg</span>
+        <span class="trend-arrow" id="pres-trend">–</span>
+      </div>
+      <div class="card-sub">Range 24H: <span id="val-pres-range">-- – --</span></div>
+    </div>
+
+    <!-- Precipitation -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Precipitation</div>
+        <div class="card-icon">🌧</div>
+      </div>
+      <div class="card-value" id="val-precip-rate">--<span class="card-unit">in/hr</span></div>
+      <div class="card-sub">Total today: <span id="val-precip-total">-- in</span></div>
+    </div>
+
+    <!-- UV / Solar -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">UV Index</div>
+        <div class="card-icon">☀️</div>
+      </div>
+      <div class="card-value" id="val-uv">--<span class="card-unit" id="val-uv-label">--</span></div>
+      <div class="card-sub">Solar: <span id="val-solar">-- W/m²</span></div>
+      <div class="uv-bar">
+        <div class="uv-cursor" id="uv-cursor" style="position:relative;left:0%"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── RAIN PREDICTION (full-width) ── -->
+  <div class="rain-card-full" id="card-rain">
+    <div class="rain-top">
+      <div class="rain-top-title">🌧 Rain Forecast · Next 4 Hours</div>
+      <div class="rain-confidence-badge" id="rain-confidence">-- confidence</div>
+    </div>
+    <div class="rain-body">
+      <div class="rain-main">
+        <div class="rain-gauge" id="rain-gauge">
+          <span class="rain-pct" id="rain-pct">--%</span>
+        </div>
+        <div class="rain-label" id="rain-label">--</div>
+        <div class="rain-sublabel">chance of rain</div>
+      </div>
+      <div class="rain-explanation">
+        <div class="rain-explain-title">How this prediction was made</div>
+        <div class="rain-explain-desc">
+          This is a local heuristic model using only your PWS sensor data — no external forecast API.
+          It analyses the last 6 hours of observations across 6 atmospheric signals, each contributing
+          points toward a final score (0–100). The higher the score, the more conditions favour rain.
+        </div>
+        <div class="rain-factors" id="rain-factors"></div>
+      </div>
+    </div>
+    <div class="rain-methodology">
+      <strong>Scoring bands:</strong> &nbsp;0–20 = Unlikely &nbsp;·&nbsp; 21–45 = Possible &nbsp;·&nbsp; 46–70 = Likely &nbsp;·&nbsp; 71–100 = Very Likely
+      &nbsp;&nbsp;<strong>Confidence</strong> is based on how many 15-min observations were available in the 6-hour window
+      (high ≥ 19 obs, medium 6–18, low &lt; 6).
+    </div>
+  </div>
+
+  <!-- ── STATS BAR ── -->
+  <div class="stats-bar" id="stats-bar">
+    <div class="stat-item"><div class="stat-lbl">Temp High</div><div class="stat-val"><span id="s-tmax">--</span><span class="stat-unit">°F</span></div></div>
+    <div class="stat-item"><div class="stat-lbl">Temp Low</div><div class="stat-val"><span id="s-tmin">--</span><span class="stat-unit">°F</span></div></div>
+    <div class="stat-item"><div class="stat-lbl">Max Gust</div><div class="stat-val"><span id="s-gust">--</span><span class="stat-unit">mph</span></div></div>
+    <div class="stat-item"><div class="stat-lbl">Avg Humidity</div><div class="stat-val"><span id="s-hum">--</span><span class="stat-unit">%</span></div></div>
+    <div class="stat-item"><div class="stat-lbl">Precip Total</div><div class="stat-val"><span id="s-precip">--</span><span class="stat-unit">in</span></div></div>
+    <div class="stat-item"><div class="stat-lbl">Pressure Min</div><div class="stat-val"><span id="s-pmin">--</span><span class="stat-unit">inHg</span></div></div>
+    <div class="stat-item"><div class="stat-lbl">Pressure Max</div><div class="stat-val"><span id="s-pmax">--</span><span class="stat-unit">inHg</span></div></div>
+  </div>
+
+  <!-- ── CHARTS ── -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">🌡 Temperature &amp; Dew Point</div>
+      <div class="chart-wrap"><canvas id="chart-temp"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">💧 Humidity</div>
+      <div class="chart-wrap"><canvas id="chart-hum"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">💨 Wind Speed &amp; Gusts</div>
+      <div class="chart-wrap"><canvas id="chart-wind"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🌀 Pressure</div>
+      <div class="chart-wrap"><canvas id="chart-pres"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🌧 Precipitation Rate</div>
+      <div class="chart-wrap"><canvas id="chart-precip"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">☀️ Solar Radiation</div>
+      <div class="chart-wrap"><canvas id="chart-solar"></canvas></div>
+    </div>
+  </div>
+
+  <footer>
+    PWS Observer · {{ station_id }} · Spring, TX &nbsp;|&nbsp;
+    Last updated: <span id="last-updated">--</span> &nbsp;|&nbsp;
+    Refreshes every 60s
+  </footer>
+</div>
+
+<script>
+// ── CLOUDS ─────────────────────────────────────────────────────────────
+(function(){
+  const c = document.getElementById('clouds');
+  const blobs = [
+    {w:500,h:220,top:3, dur:140,delay:0,   op:0.055},
+    {w:700,h:260,top:12,dur:200,delay:-70, op:0.04},
+    {w:350,h:160,top:6, dur:100,delay:-30, op:0.065},
+    {w:600,h:230,top:22,dur:170,delay:-100,op:0.035},
+    {w:420,h:190,top:35,dur:220,delay:-50, op:0.04},
+    {w:280,h:130,top:8, dur:90, delay:-15, op:0.05},
+  ];
+  blobs.forEach(b=>{
+    const el=document.createElement('div');
+    el.className='cloud-blob';
+    el.style.cssText=`width:${b.w}px;height:${b.h}px;top:${b.top}%;background:rgba(255,255,255,${b.op});animation-duration:${b.dur}s;animation-delay:${b.delay}s`;
+    c.appendChild(el);
+  });
+})();
+
+// ── CLOCK ──────────────────────────────────────────────────────────────
+function updateClock(){
+  const n=new Date();
+  document.getElementById('clock').textContent=
+    n.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(updateClock,1000); updateClock();
+
+// ── CHART DEFAULTS ────────────────────────────────────────────────────
+const CHART_DEFAULTS = {
+  responsive:true, maintainAspectRatio:false,
+  animation:{duration:600},
+  interaction:{mode:'index',intersect:false},
+  plugins:{
+    legend:{display:true,labels:{color:'#1d7fbd',font:{family:"'Space Mono'",size:10},boxWidth:12,padding:10}},
+    tooltip:{
+      backgroundColor:'rgba(255,255,255,.97)',
+      borderColor:'rgba(29,127,189,.25)',borderWidth:1,
+      titleColor:'#0f2a45',bodyColor:'#4a7fa8',
+      titleFont:{family:"'Space Mono'",size:11},
+      bodyFont:{family:"'Space Mono'",size:10},
+      padding:10,
+    }
+  },
+  scales:{
+    x:{
+      ticks:{color:'#4a7fa8',font:{family:"'Space Mono'",size:9},maxTicksLimit:8,maxRotation:0},
+      grid:{color:'rgba(29,127,189,.08)'},border:{color:'rgba(29,127,189,.2)'}
+    },
+    y:{
+      ticks:{color:'#4a7fa8',font:{family:"'Space Mono'",size:9}},
+      grid:{color:'rgba(29,127,189,.08)'},border:{color:'rgba(29,127,189,.2)'}
+    }
+  }
+};
+
+function mkChart(id, cfg){
+  const ctx = document.getElementById(id).getContext('2d');
+  return new Chart(ctx, cfg);
+}
+
+const charts = {};
+
+function buildCharts(history){
+  const labels = history.map(r=>{
+    const d=new Date(r.t);
+    return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+  });
+
+  const datasets = {
+    temp:   history.map(r=>r.temp_f),
+    dewpt:  history.map(r=>r.dewpt_f),
+    hum:    history.map(r=>r.humidity),
+    wind:   history.map(r=>r.wind_speed),
+    gust:   history.map(r=>r.wind_gust),
+    pres:   history.map(r=>r.pressure),
+    precip: history.map(r=>r.precip_rate),
+    solar:  history.map(r=>r.solar),
+  };
+
+  const areaFill = (color) => ({
+    backgroundColor: `${color}18`,
+    borderColor: color,
+    borderWidth:2, pointRadius:0, fill:true,
+    tension:.35
+  });
+
+  // Destroy old charts
+  Object.values(charts).forEach(c=>c.destroy());
+
+  charts.temp = mkChart('chart-temp',{
+    type:'line', data:{labels,datasets:[
+      {...areaFill('#38c8f0'), label:'Temp °F', data:datasets.temp},
+      {...areaFill('#60a5fa'), label:'Dewpt °F', data:datasets.dewpt, borderDash:[4,4], fill:false},
+    ]},
+    options:{...CHART_DEFAULTS}
+  });
+
+  charts.hum = mkChart('chart-hum',{
+    type:'line', data:{labels,datasets:[
+      {...areaFill('#3b82f6'), label:'Humidity %', data:datasets.hum},
+    ]},
+    options:{...CHART_DEFAULTS}
+  });
+
+  charts.wind = mkChart('chart-wind',{
+    type:'line', data:{labels,datasets:[
+      {...areaFill('#10b981'), label:'Speed mph', data:datasets.wind},
+      {...areaFill('#f59e0b'), label:'Gust mph', data:datasets.gust, borderDash:[4,4]},
+    ]},
+    options:{...CHART_DEFAULTS}
+  });
+
+  charts.pres = mkChart('chart-pres',{
+    type:'line', data:{labels,datasets:[
+      {...areaFill('#8b5cf6'), label:'Pressure inHg', data:datasets.pres},
+    ]},
+    options:{...CHART_DEFAULTS}
+  });
+
+  charts.precip = mkChart('chart-precip',{
+    type:'bar', data:{labels,datasets:[
+      {label:'Precip in/hr', data:datasets.precip,
+       backgroundColor:'rgba(56,200,240,.35)',borderColor:'#38c8f0',borderWidth:1,
+       borderRadius:2}
+    ]},
+    options:{...CHART_DEFAULTS}
+  });
+
+  charts.solar = mkChart('chart-solar',{
+    type:'line', data:{labels,datasets:[
+      {...areaFill('#f59e0b'), label:'Solar W/m²', data:datasets.solar},
+    ]},
+    options:{...CHART_DEFAULTS}
+  });
+}
+
+// ── WIND DIR ──────────────────────────────────────────────────────────
+const DIRS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+function deg2card(d){return DIRS[Math.round(d/22.5)%16]}
+
+// ── UV LABEL ─────────────────────────────────────────────────────────
+function uvLabel(u){
+  if(u<=2)return'Low';if(u<=5)return'Moderate';
+  if(u<=7)return'High';if(u<=10)return'Very High';
+  return'Extreme';
+}
+
+// ── PRESSURE TREND ────────────────────────────────────────────────────
+let _prevPres = null;
+function presTrend(p){
+  if(_prevPres===null){_prevPres=p;return'<span class="trend-arrow trend-steady">–</span>'}
+  const diff=p-_prevPres; _prevPres=p;
+  if(diff>0.02)return'<span class="trend-arrow trend-up">↑</span>';
+  if(diff<-0.02)return'<span class="trend-arrow trend-down">↓</span>';
+  return'<span class="trend-arrow trend-steady">–</span>';
+}
+
+// ── LOAD LATEST ───────────────────────────────────────────────────────
+async function loadLatest(){
+  try{
+    const r=await fetch('/api/latest');
+    if(!r.ok)return;
+    const d=await r.json();
+
+    const fmt1=(v,dec=1)=>v!=null?Number(v).toFixed(dec):'--';
+
+    document.getElementById('val-temp').innerHTML=
+      `${fmt1(d.temp_f,0)}<span class="temp-unit">°F</span>`;
+    document.getElementById('val-feels').textContent=fmt1(d.feels_like,0);
+    document.getElementById('val-dewpt').textContent=fmt1(d.dewpt_f,1);
+    document.getElementById('val-hum').innerHTML=
+      `${fmt1(d.humidity,0)}<span class="card-unit">%</span>`;
+    document.getElementById('gauge-hum').style.width=`${d.humidity||0}%`;
+
+    document.getElementById('val-wind').innerHTML=
+      `${fmt1(d.wind_speed_mph,1)}<span class="card-unit">mph</span>`;
+    document.getElementById('val-gust').textContent=`${fmt1(d.wind_gust_mph,1)} mph`;
+
+    if(d.wind_dir!=null){
+      document.getElementById('compass-needle').style.transform=
+        `translateX(-50%) rotate(${d.wind_dir}deg)`;
+      document.getElementById('val-wind-dir-text').textContent=deg2card(d.wind_dir);
+    }
+
+    document.getElementById('val-pres').textContent=fmt1(d.pressure_in,2);
+    document.getElementById('pres-trend').innerHTML=presTrend(d.pressure_in);
+
+    document.getElementById('val-precip-rate').innerHTML=
+      `${fmt1(d.precip_rate_in,3)}<span class="card-unit">in/hr</span>`;
+    document.getElementById('val-precip-total').textContent=
+      `${fmt1(d.precip_total_in,2)} in`;
+
+    const uv=d.uv||0;
+    document.getElementById('val-uv').innerHTML=
+      `${uv}<span class="card-unit" id="val-uv-label">${uvLabel(uv)}</span>`;
+    document.getElementById('uv-cursor').style.left=`${Math.min(uv/12*100,100)}%`;
+    document.getElementById('val-solar').textContent=`${fmt1(d.solar_radiation,0)} W/m²`;
+
+    const t=new Date(d.observed_at);
+    document.getElementById('last-updated').textContent=
+      t.toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  }catch(e){console.error('latest fetch error',e)}
+}
+
+// ── LOAD HISTORY ──────────────────────────────────────────────────────
+async function loadHistory(hours=24){
+  try{
+    const r=await fetch(`/api/history?hours=${hours}`);
+    if(!r.ok)return;
+    const data=await r.json();
+    if(data.length>1) buildCharts(data);
+  }catch(e){console.error('history fetch error',e)}
+}
+
+// ── LOAD STATS ────────────────────────────────────────────────────────
+async function loadStats(hours=24){
+  try{
+    const r=await fetch(`/api/stats?hours=${hours}`);
+    if(!r.ok)return;
+    const d=await r.json();
+    const f=(v,dec=1)=>v!=null?Number(v).toFixed(dec):'--';
+    document.getElementById('s-tmax').textContent=f(d.temp_max,1);
+    document.getElementById('s-tmin').textContent=f(d.temp_min,1);
+    document.getElementById('s-gust').textContent=f(d.gust_max,1);
+    document.getElementById('s-hum').textContent=f(d.hum_avg,0);
+    document.getElementById('s-precip').textContent=f(d.precip_sum,3);
+    document.getElementById('s-pmin').textContent=f(d.pres_min,2);
+    document.getElementById('s-pmax').textContent=f(d.pres_max,2);
+    document.getElementById('val-hi').textContent=f(d.temp_max,0)+'°';
+    document.getElementById('val-lo').textContent=f(d.temp_min,0)+'°';
+    document.getElementById('val-avg').textContent=f(d.temp_avg,0)+'°';
+    document.getElementById('val-obs').textContent=d.obs_count||'--';
+    document.getElementById('val-hum-max').textContent=f(d.hum_max,0)+'%';
+    document.getElementById('val-pres-range').textContent=
+      `${f(d.pres_min,2)} – ${f(d.pres_max,2)}`;
+  }catch(e){console.error('stats fetch error',e)}
+}
+
+// ── RANGE BUTTONS ────────────────────────────────────────────────────
+let activeHours=24;
+document.querySelectorAll('.range-btn').forEach(btn=>{
+  btn.addEventListener('click',function(){
+    document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
+    this.classList.add('active');
+    activeHours=parseInt(this.dataset.h);
+    loadHistory(activeHours);
+    loadStats(activeHours);
+  });
+});
+
+// ── RAIN PREDICTION ──────────────────────────────────────────────────
+function rainColor(label){
+  return({'Unlikely':'#34d399','Possible':'#fbbf24','Likely':'#f97316','Very Likely':'#fb7185'})[label]||'#4a7fa8';
+}
+function contribColor(c){
+  return({'strong':'#fb7185','moderate':'#fbbf24','slight':'#7dd3fc','none':'#2d4f6e'})[c]||'#2d4f6e';
+}
+const FACTOR_META={
+  'Pressure Trend':        {icon:'📉',max:30},
+  'Humidity':              {icon:'💧',max:20},
+  'Dew Point Spread':      {icon:'🌡️',max:20},
+  'Current Precipitation': {icon:'🌧',max:15},
+  'Absolute Pressure':     {icon:'⬇️',max:10},
+  'Solar Radiation Drop':  {icon:'☁️',max:5},
+};
+const FACTOR_EXPLAIN={
+  'Pressure Trend':{
+    strong:'Pressure is dropping fast — a classic sign of an incoming storm system.',
+    moderate:'Pressure is falling — unsettled weather may be moving in.',
+    slight:'Small pressure drop — minor atmospheric change detected.',
+    none:'Pressure is steady or rising — skies likely stable.',
+  },
+  'Humidity':{
+    strong:'Very high humidity — the air is nearly saturated and primed for rain.',
+    moderate:'Elevated humidity — moisture is building in the atmosphere.',
+    slight:'Humidity is above average.',
+    none:'Air is relatively dry — rain is unlikely from this signal.',
+  },
+  'Dew Point Spread':{
+    strong:'Temp and dew point are nearly the same — the air is at saturation.',
+    moderate:'Small gap between temperature and dew point — air is becoming saturated.',
+    slight:'Moderate temp/dew point gap.',
+    none:'Large gap between temperature and dew point — air is far from saturated.',
+  },
+  'Current Precipitation':{
+    strong:'Rain is already falling — high probability it continues.',
+    moderate:'Light precipitation is active at your station.',
+    slight:'Trace precipitation detected.',
+    none:'No active precipitation at this time.',
+  },
+  'Absolute Pressure':{
+    strong:'Barometric pressure is low — storm systems are present in the region.',
+    moderate:'Below-normal pressure — conditions are unsettled.',
+    slight:'Slightly below average pressure.',
+    none:'Normal or high pressure — stable atmospheric conditions.',
+  },
+  'Solar Radiation Drop':{
+    strong:'Solar output dropped sharply — heavy cloud cover is building overhead.',
+    moderate:'Noticeable decrease in solar radiation — clouds are increasing.',
+    slight:'Slight solar decrease — some cloud cover detected.',
+    none:'Solar radiation is normal for the time of day.',
+  },
+};
+function contribPts(contrib,max){
+  return Math.round(({'strong':1,'moderate':0.6,'slight':0.25,'none':0}[contrib]||0)*max);
+}
+async function loadRainPrediction(){
+  try{
+    const r=await fetch('/api/rain-prediction');
+    if(!r.ok)return;
+    const d=await r.json();
+    const color=rainColor(d.label);
+    const gauge=document.getElementById('rain-gauge');
+    gauge.style.setProperty('--rain-color',color);
+    gauge.style.setProperty('--rain-pct',d.probability+'%');
+    document.getElementById('rain-pct').textContent=d.probability+'%';
+    const lbl=document.getElementById('rain-label');
+    lbl.textContent=d.label;
+    lbl.style.color=color;
+    const confMap={'high':'High Confidence','medium':'Medium Confidence','low':'Low Confidence — limited data'};
+    document.getElementById('rain-confidence').textContent=confMap[d.confidence]||d.confidence;
+    const fEl=document.getElementById('rain-factors');
+    fEl.innerHTML=d.factors.map(f=>{
+      const meta=FACTOR_META[f.name]||{icon:'◦',max:10};
+      const pts=contribPts(f.contribution,meta.max);
+      const barW=meta.max>0?Math.round((pts/meta.max)*100):0;
+      const explain=(FACTOR_EXPLAIN[f.name]||{})[f.contribution]||'';
+      const bc=contribColor(f.contribution);
+      return `<div class="rain-factor-row">
+        <div class="rain-factor-icon">${meta.icon}</div>
+        <div class="rain-factor-body">
+          <div class="rain-factor-name">${f.name}<span class="rain-factor-measured">${f.value}</span></div>
+          <div class="rain-factor-explain">${explain}</div>
+          <div class="rain-factor-bar-bg"><div class="rain-factor-bar-fill" style="width:${barW}%;background:${bc}"></div></div>
+        </div>
+        <div class="rain-factor-score">${pts} / ${meta.max} pts</div>
+      </div>`;
+    }).join('');
+  }catch(e){console.warn('Rain prediction error',e)}
+}
+
+// ── INIT & POLL ───────────────────────────────────────────────────────
+async function refresh(){
+  await loadLatest();
+  await loadHistory(activeHours);
+  await loadStats(activeHours);
+  await loadRainPrediction();
+}
+
+refresh();
+setInterval(refresh, 60_000); // re-fetch every 60s
+</script>
+</body>
+</html>
