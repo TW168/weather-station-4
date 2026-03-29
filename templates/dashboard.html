@@ -58,6 +58,15 @@ body{
   filter:blur(70px);
   animation:cloud-drift linear infinite;
 }
+/* ── MAIN METRICS GROUP VISUAL ─────────────────────────────────────── */
+.main-metrics-group {
+  background: var(--bg2);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(29,127,189,.07);
+  padding: 18px 12px 8px 12px;
+  margin-bottom: 24px;
+}
 @keyframes cloud-drift{
   from{transform:translateX(-350px)}
   to{transform:translateX(calc(100vw + 350px))}
@@ -97,12 +106,21 @@ header{
 
 .range-selector{display:flex;gap:6px}
 .range-btn{
-  font-family:var(--font-mono);font-size:11px;padding:5px 12px;
-  border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.6);
+  font-family:var(--font-mono);font-size:12px;padding:7px 18px;
+  border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.7);
   color:var(--text-muted);cursor:pointer;transition:.2s;letter-spacing:.06em;
+  margin-right:2px;
 }
-.range-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(255,255,255,0.9)}
+.range-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(255,255,255,0.95)}
 .range-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+
+#loading-indicator {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent);
+  margin-left: 16px;
+  vertical-align: middle;
+}
 
 /* ── HERO ROW ────────────────────────────────────────────────────────── */
 .hero{
@@ -350,6 +368,7 @@ footer{
 <div class="clouds" id="clouds"></div>
 
 <div id="app">
+
   <!-- ── HEADER ── -->
   <header>
     <div class="logo">
@@ -362,16 +381,45 @@ footer{
     <div class="header-right">
       <div id="status-dot"></div>
       <div id="clock">--:--:-- --</div>
-      <div class="range-selector">
-        <button class="range-btn active" data-h="24">24H</button>
-        <button class="range-btn" data-h="48">48H</button>
-        <button class="range-btn" data-h="168">7D</button>
-      </div>
     </div>
   </header>
 
-  <!-- ── HERO CARDS ── -->
-  <div class="hero">
+  <!-- ── RANGE SELECTOR (moved above cards) ── -->
+
+  <!-- ── RAIN PREDICTION (full-width) — moved to top ── -->
+ <div class="rain-card-full" id="card-rain">
+    <div class="rain-top">
+      <div class="rain-top-title">🌧 Rain Forecast · Next 4 Hours</div>
+      <div class="rain-confidence-badge" id="rain-confidence">-- confidence</div>
+    </div>
+    <div class="rain-body">
+      <div class="rain-main">
+        <div class="rain-gauge" id="rain-gauge">
+          <span class="rain-pct" id="rain-pct">--%</span>
+        </div>
+        <div class="rain-label" id="rain-label">--</div>
+        <div class="rain-sublabel">chance of rain</div>
+      </div>
+      <div class="rain-explanation">
+        <div class="rain-explain-title">How this prediction was made</div>
+        <div class="rain-explain-desc">
+          This is a local heuristic model using only your PWS sensor data — no external forecast API.
+          It analyses the last 6 hours of observations across 6 atmospheric signals, each contributing
+          points toward a final score (0–100). The higher the score, the more conditions favour rain.
+        </div>
+        <div class="rain-factors" id="rain-factors"></div>
+      </div>
+    </div>
+    <div class="rain-methodology">
+      <strong>Scoring bands:</strong> &nbsp;0–20 = Unlikely &nbsp;·&nbsp; 21–45 = Possible &nbsp;·&nbsp; 46–70 = Likely &nbsp;·&nbsp; 71–100 = Very Likely
+      &nbsp;&nbsp;<strong>Confidence</strong> is based on how many 15-min observations were available in the 6-hour window
+      (high ≥ 19 obs, medium 6–18, low &lt; 6).
+    </div>
+  </div> 
+
+  <!-- ── MAIN METRICS GROUP ── -->
+  <section class="main-metrics-group">
+    <div class="hero">
     <!-- Temperature (tall card) -->
     <div class="card card-temp" id="card-temp">
       <div>
@@ -457,36 +505,6 @@ footer{
 
   </div>
 
-  <!-- ── RAIN PREDICTION (full-width) ── -->
-  <div class="rain-card-full" id="card-rain">
-    <div class="rain-top">
-      <div class="rain-top-title">🌧 Rain Forecast · Next 4 Hours</div>
-      <div class="rain-confidence-badge" id="rain-confidence">-- confidence</div>
-    </div>
-    <div class="rain-body">
-      <div class="rain-main">
-        <div class="rain-gauge" id="rain-gauge">
-          <span class="rain-pct" id="rain-pct">--%</span>
-        </div>
-        <div class="rain-label" id="rain-label">--</div>
-        <div class="rain-sublabel">chance of rain</div>
-      </div>
-      <div class="rain-explanation">
-        <div class="rain-explain-title">How this prediction was made</div>
-        <div class="rain-explain-desc">
-          This is a local heuristic model using only your PWS sensor data — no external forecast API.
-          It analyses the last 6 hours of observations across 6 atmospheric signals, each contributing
-          points toward a final score (0–100). The higher the score, the more conditions favour rain.
-        </div>
-        <div class="rain-factors" id="rain-factors"></div>
-      </div>
-    </div>
-    <div class="rain-methodology">
-      <strong>Scoring bands:</strong> &nbsp;0–20 = Unlikely &nbsp;·&nbsp; 21–45 = Possible &nbsp;·&nbsp; 46–70 = Likely &nbsp;·&nbsp; 71–100 = Very Likely
-      &nbsp;&nbsp;<strong>Confidence</strong> is based on how many 15-min observations were available in the 6-hour window
-      (high ≥ 19 obs, medium 6–18, low &lt; 6).
-    </div>
-  </div>
 
   <!-- ── STATS BAR ── -->
   <div class="stats-bar" id="stats-bar">
@@ -498,34 +516,43 @@ footer{
     <div class="stat-item"><div class="stat-lbl">Pressure Min</div><div class="stat-val"><span id="s-pmin">--</span><span class="stat-unit">inHg</span></div></div>
     <div class="stat-item"><div class="stat-lbl">Pressure Max</div><div class="stat-val"><span id="s-pmax">--</span><span class="stat-unit">inHg</span></div></div>
   </div>
+  </section>
 
   <!-- ── CHARTS ── -->
-  <div class="charts-grid">
-    <div class="chart-card">
-      <div class="chart-title">🌡 Temperature &amp; Dew Point</div>
-      <div class="chart-wrap"><canvas id="chart-temp"></canvas></div>
+  <section class="main-metrics-group charts-group">
+    <div class="range-selector charts-range-selector" style="margin-bottom:18px;">
+      <button class="range-btn active" data-h="24">24H</button>
+      <button class="range-btn" data-h="48">48H</button>
+      <button class="range-btn" data-h="168">7D</button>
+      <span id="loading-indicator" style="display:none;margin-left:16px;font-size:13px;color:#1d7fbd;vertical-align:middle;">Loading…</span>
     </div>
-    <div class="chart-card">
-      <div class="chart-title">💧 Humidity</div>
-      <div class="chart-wrap"><canvas id="chart-hum"></canvas></div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">🌡 Temperature &amp; Dew Point</div>
+        <div class="chart-wrap"><canvas id="chart-temp"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">💧 Humidity</div>
+        <div class="chart-wrap"><canvas id="chart-hum"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">💨 Wind Speed &amp; Gusts</div>
+        <div class="chart-wrap"><canvas id="chart-wind"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🌀 Pressure</div>
+        <div class="chart-wrap"><canvas id="chart-pres"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🌧 Precipitation Rate</div>
+        <div class="chart-wrap"><canvas id="chart-precip"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">☀️ Solar Radiation</div>
+        <div class="chart-wrap"><canvas id="chart-solar"></canvas></div>
+      </div>
     </div>
-    <div class="chart-card">
-      <div class="chart-title">💨 Wind Speed &amp; Gusts</div>
-      <div class="chart-wrap"><canvas id="chart-wind"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">🌀 Pressure</div>
-      <div class="chart-wrap"><canvas id="chart-pres"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">🌧 Precipitation Rate</div>
-      <div class="chart-wrap"><canvas id="chart-precip"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">☀️ Solar Radiation</div>
-      <div class="chart-wrap"><canvas id="chart-solar"></canvas></div>
-    </div>
-  </div>
+  </section>
 
   <footer>
     PWS Observer · {{ station_id }} · Spring, TX &nbsp;|&nbsp;
@@ -598,9 +625,30 @@ function mkChart(id, cfg){
 const charts = {};
 
 function buildCharts(history){
-  const labels = history.map(r=>{
-    const d=new Date(r.t);
-    return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+  // Show a message if no data is available
+  let noDataMsg = document.getElementById('no-data-message');
+  if (!noDataMsg) {
+    noDataMsg = document.createElement('div');
+    noDataMsg.id = 'no-data-message';
+    noDataMsg.style = 'text-align:center;color:#dc2626;font-family:var(--font-mono);font-size:16px;margin-bottom:12px;';
+    document.querySelector('.charts-group').insertBefore(noDataMsg, document.querySelector('.charts-grid'));
+  }
+  if (!history || history.length === 0) {
+    noDataMsg.textContent = 'No data available for this range.';
+    // Destroy old charts if any
+    Object.values(charts).forEach(c=>c.destroy && c.destroy());
+    return;
+  } else {
+    noDataMsg.textContent = '';
+  }
+
+  // Use formatted date/time for x-axis labels
+  const labels = history.map(r => {
+    const d = new Date(r.t);
+    // For long ranges, show date+hour; for short, just hour:minute
+    return history.length > 48
+      ? d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   });
 
   const datasets = {
@@ -622,7 +670,7 @@ function buildCharts(history){
   });
 
   // Destroy old charts
-  Object.values(charts).forEach(c=>c.destroy());
+  Object.values(charts).forEach(c=>c.destroy && c.destroy());
 
   charts.temp = mkChart('chart-temp',{
     type:'line', data:{labels,datasets:[
@@ -776,12 +824,16 @@ async function loadStats(hours=24){
 // ── RANGE BUTTONS ────────────────────────────────────────────────────
 let activeHours=24;
 document.querySelectorAll('.range-btn').forEach(btn=>{
-  btn.addEventListener('click',function(){
+  btn.addEventListener('click',async function(){
     document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
     this.classList.add('active');
     activeHours=parseInt(this.dataset.h);
-    loadHistory(activeHours);
-    loadStats(activeHours);
+    document.getElementById('loading-indicator').style.display = 'inline';
+    await Promise.all([
+      loadHistory(activeHours),
+      loadStats(activeHours)
+    ]);
+    document.getElementById('loading-indicator').style.display = 'none';
   });
 });
 
@@ -878,10 +930,12 @@ async function loadRainPrediction(){
 
 // ── INIT & POLL ───────────────────────────────────────────────────────
 async function refresh(){
+  document.getElementById('loading-indicator').style.display = 'inline';
   await loadLatest();
   await loadHistory(activeHours);
   await loadStats(activeHours);
   await loadRainPrediction();
+  document.getElementById('loading-indicator').style.display = 'none';
 }
 
 refresh();
