@@ -37,7 +37,7 @@ body{
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
-  font-size: 16px;
+  font-size: 18px;
   min-height: 100vh;
   overflow-x: hidden;
 }
@@ -89,15 +89,15 @@ header{
   box-shadow:0 0 20px var(--glow);
 }
 .logo-text{
-  font-family:var(--font-cond);font-size:22px;font-weight:700;letter-spacing:.05em;
+  font-family:var(--font-cond);font-size:26px;font-weight:700;letter-spacing:.05em;
   color:var(--text);
 }
 .logo-sub{
-  font-size:11px;color:var(--text-muted);letter-spacing:.12em;text-transform:uppercase;
+  font-size:13px;color:var(--text-muted);letter-spacing:.12em;text-transform:uppercase;
   font-family:var(--font-mono);
 }
 .header-right{display:flex;align-items:center;gap:16px}
-#clock{font-family:var(--font-mono);font-size:13px;color:var(--text-muted)}
+#clock{font-family:var(--font-mono);font-size:15px;color:var(--text-muted)}
 #status-dot{
   width:8px;height:8px;border-radius:50%;background:var(--success);
   box-shadow:0 0 6px var(--success);animation:pulse-dot 2s ease-in-out infinite;
@@ -106,7 +106,7 @@ header{
 
 .range-selector{display:flex;gap:6px}
 .range-btn{
-  font-family:var(--font-mono);font-size:12px;padding:7px 18px;
+  font-family:var(--font-mono);font-size:14px;padding:7px 18px;
   border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.7);
   color:var(--text-muted);cursor:pointer;transition:.2s;letter-spacing:.06em;
   margin-right:2px;
@@ -148,22 +148,22 @@ header{
   background:radial-gradient(circle,rgba(255,255,255,.12) 0%,transparent 70%);
   pointer-events:none;
 }
-.temp-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.15em;color:var(--text-muted);text-transform:uppercase}
+.temp-label{font-family:var(--font-mono);font-size:12px;letter-spacing:.15em;color:var(--text-muted);text-transform:uppercase}
 .temp-value{
-  font-family:var(--font-cond);font-size:96px;font-weight:700;line-height:1;
+  font-family:var(--font-cond);font-size:108px;font-weight:700;line-height:1;
   color:var(--text);
   text-shadow:none;
 }
-.temp-unit{font-size:36px;font-weight:400;color:var(--text-muted)}
-.temp-feels{font-size:15px;color:var(--text-muted);margin-top:4px}
+.temp-unit{font-size:40px;font-weight:400;color:var(--text-muted)}
+.temp-feels{font-size:17px;color:var(--text-muted);margin-top:4px}
 .temp-feels span{color:var(--accent)}
-.temp-dewpt{font-size:14px;color:var(--text-muted);margin-top:2px}
+.temp-dewpt{font-size:16px;color:var(--text-muted);margin-top:2px}
 .temp-minmax{
   display:flex;gap:20px;padding-top:16px;border-top:1px solid var(--border);
-  font-family:var(--font-mono);font-size:13px;
+  font-family:var(--font-mono);font-size:15px;
 }
 .mm-item{display:flex;flex-direction:column;gap:2px}
-.mm-lbl{font-size:11px;color:var(--text-muted);letter-spacing:.1em}
+.mm-lbl{font-size:12px;color:var(--text-muted);letter-spacing:.1em}
 .mm-val{color:var(--text);font-weight:600}
 .mm-val.hot{color:#dc2626}
 .mm-val.cool{color:#1d7fbd}
@@ -181,10 +181,10 @@ header{
 .card:hover{border-color:rgba(29,127,189,.4);box-shadow:0 4px 20px rgba(29,127,189,.15)}
 .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .card-icon{font-size:20px;opacity:.7}
-.card-title{font-family:var(--font-mono);font-size:12px;letter-spacing:.12em;color:var(--text-muted);text-transform:uppercase}
-.card-value{font-family:var(--font-cond);font-size:52px;font-weight:600;line-height:1;color:var(--text)}
-.card-unit{font-size:20px;font-weight:300;color:var(--text-muted);margin-left:4px}
-.card-sub{font-size:14px;color:var(--text-muted);margin-top:6px}
+.card-title{font-family:var(--font-mono);font-size:14px;letter-spacing:.12em;color:var(--text-muted);text-transform:uppercase}
+.card-value{font-family:var(--font-cond);font-size:60px;font-weight:600;line-height:1;color:var(--text)}
+.card-unit{font-size:24px;font-weight:300;color:var(--text-muted);margin-left:4px}
+.card-sub{font-size:16px;color:var(--text-muted);margin-top:6px}
 .card-sub span{color:var(--accent)}
 
 /* ── WIND DIRECTION COMPASS ──────────────────────────────────────────── */
@@ -249,10 +249,10 @@ header{
   background:radial-gradient(circle,rgba(29,127,189,.05) 0%,transparent 70%);
   pointer-events:none;
 }
-.rain-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
-.rain-top-title{font-family:var(--font-mono);font-size:11px;letter-spacing:.15em;color:var(--text-muted);text-transform:uppercase}
+.rain-top{display:flex;align-items:center;justify-content:flex-start;margin-bottom:24px}
+.rain-top-title{font-family:var(--font-mono);font-size:13px;letter-spacing:.15em;color:var(--text-muted);text-transform:uppercase}
 .rain-confidence-badge{
-  font-family:var(--font-mono);font-size:10px;padding:4px 12px;
+  font-family:var(--font-mono);font-size:12px;padding:4px 12px;
   border-radius:20px;border:1px solid var(--border);
   color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;
 }
@@ -268,25 +268,25 @@ header{
   content:'';position:absolute;inset:16px;border-radius:50%;
   background:#f0f8fd;
 }
-.rain-pct{position:relative;z-index:1;font-family:var(--font-cond);font-size:44px;font-weight:700;color:var(--text);line-height:1}
-.rain-label{font-family:var(--font-cond);font-size:30px;font-weight:700;text-align:center}
-.rain-sublabel{font-size:14px;color:var(--text-muted);text-align:center}
+.rain-pct{position:relative;z-index:1;font-family:var(--font-cond);font-size:50px;font-weight:700;color:var(--text);line-height:1}
+.rain-label{font-family:var(--font-cond);font-size:36px;font-weight:700;text-align:center}
+.rain-sublabel{font-size:16px;color:var(--text-muted);text-align:center}
 .rain-explanation{display:flex;flex-direction:column;gap:16px}
-.rain-explain-title{font-family:var(--font-mono);font-size:12px;letter-spacing:.12em;color:var(--text-muted);text-transform:uppercase}
-.rain-explain-desc{font-size:14px;color:var(--text-muted);line-height:1.7}
+.rain-explain-title{font-family:var(--font-mono);font-size:14px;letter-spacing:.12em;color:var(--text-muted);text-transform:uppercase}
+.rain-explain-desc{font-size:16px;color:var(--text-muted);line-height:1.7}
 .rain-factors{display:flex;flex-direction:column;gap:14px}
 .rain-factor-row{display:grid;grid-template-columns:26px 1fr 80px;gap:12px;align-items:start}
 .rain-factor-icon{font-size:18px;line-height:1.4}
 .rain-factor-body{display:flex;flex-direction:column;gap:4px}
-.rain-factor-name{font-size:15px;color:var(--text);font-weight:600}
-.rain-factor-measured{font-family:var(--font-mono);font-size:12px;color:var(--accent);margin-left:8px}
-.rain-factor-explain{font-size:13px;color:var(--text-muted);line-height:1.5}
+.rain-factor-name{font-size:17px;color:var(--text);font-weight:600}
+.rain-factor-measured{font-family:var(--font-mono);font-size:13px;color:var(--accent);margin-left:8px}
+.rain-factor-explain{font-size:15px;color:var(--text-muted);line-height:1.5}
 .rain-factor-bar-bg{height:5px;border-radius:3px;background:#c8dff0;overflow:hidden;margin-top:6px}
 .rain-factor-bar-fill{height:100%;border-radius:3px;transition:width .9s ease}
-.rain-factor-score{font-family:var(--font-mono);font-size:12px;color:var(--text-muted);text-align:right;padding-top:3px;font-weight:600}
+.rain-factor-score{font-family:var(--font-mono);font-size:13px;color:var(--text-muted);text-align:right;padding-top:3px;font-weight:600}
 .rain-methodology{
   margin-top:22px;padding-top:16px;border-top:1px solid rgba(29,127,189,.15);
-  font-size:13px;color:var(--text-muted);line-height:1.8;
+  font-size:15px;color:var(--text-muted);line-height:1.8;
 }
 .rain-methodology strong{color:var(--text)}
 
@@ -313,7 +313,7 @@ header{
   box-shadow:0 2px 12px rgba(29,127,189,.1);
 }
 .chart-title{
-  font-family:var(--font-mono);font-size:13px;letter-spacing:.1em;
+  font-family:var(--font-mono);font-size:15px;letter-spacing:.1em;
   color:var(--text-muted);text-transform:uppercase;margin-bottom:16px;
 }
 .chart-wrap{position:relative;height:180px}
@@ -331,9 +331,9 @@ header{
   display:flex;flex-direction:column;gap:3px;
 }
 .stat-item:last-child{border-right:none}
-.stat-lbl{font-size:12px;font-family:var(--font-mono);letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase}
-.stat-val{font-family:var(--font-cond);font-size:30px;font-weight:600;color:var(--text)}
-.stat-unit{font-size:15px;color:var(--text-muted)}
+.stat-lbl{font-size:13px;font-family:var(--font-mono);letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase}
+.stat-val{font-family:var(--font-cond);font-size:36px;font-weight:600;color:var(--text)}
+.stat-unit{font-size:17px;color:var(--text-muted)}
 
 /* ── FOOTER ──────────────────────────────────────────────────────────── */
 footer{
@@ -390,7 +390,6 @@ footer{
  <div class="rain-card-full" id="card-rain">
     <div class="rain-top">
       <div class="rain-top-title">🌧 Rain Forecast · Next 4 Hours</div>
-      <div class="rain-confidence-badge" id="rain-confidence">-- confidence</div>
     </div>
     <div class="rain-body">
       <div class="rain-main">
@@ -399,6 +398,7 @@ footer{
         </div>
         <div class="rain-label" id="rain-label">--</div>
         <div class="rain-sublabel">chance of rain</div>
+        <div class="rain-confidence-badge" id="rain-confidence">-- confidence</div>
       </div>
       <div class="rain-explanation">
         <div class="rain-explain-title">How this prediction was made</div>
