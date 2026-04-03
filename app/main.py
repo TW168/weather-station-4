@@ -20,7 +20,12 @@ async def get_pool() -> asyncpg.Pool:
     if _pool is None:
         if not DATABASE_URL:
             raise RuntimeError("DATABASE_URL is not set")
-        dsn = DATABASE_URL if "sslmode=" in DATABASE_URL else f"{DATABASE_URL}?sslmode=disable"
+        if "sslmode=" in DATABASE_URL:
+            dsn = DATABASE_URL
+        elif "?" in DATABASE_URL:
+            dsn = f"{DATABASE_URL}&sslmode=disable"
+        else:
+            dsn = f"{DATABASE_URL}?sslmode=disable"
         _pool = await asyncpg.create_pool(dsn, min_size=1, max_size=3)
     return _pool
 
@@ -59,7 +64,11 @@ async def latest_10_observations() -> list[dict]:
         )
         return [_serialize_row(r) for r in rows]
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Database query failed: {exc}") from exc
+        msg = str(exc).strip() or repr(exc)
+        raise HTTPException(
+            status_code=503,
+            detail=f"Database query failed ({exc.__class__.__name__}): {msg}",
+        ) from exc
 
 
 # ---------------------------------------------------------------------------
