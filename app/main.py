@@ -2,10 +2,35 @@
 Minimal FastAPI app for deployment smoke testing.
 """
 
-from fastapi import FastAPI
+import os
+from datetime import datetime
+
+import asyncpg
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import PlainTextResponse
 
 app = FastAPI(title="Hello World Service")
+
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+_pool: asyncpg.Pool | None = None
+
+
+async def get_pool() -> asyncpg.Pool:
+    global _pool
+    if _pool is None:
+        if not DATABASE_URL:
+            raise RuntimeError("DATABASE_URL is not set")
+        dsn = DATABASE_URL if "sslmode=" in DATABASE_URL else f"{DATABASE_URL}?sslmode=disable"
+        _pool = await asyncpg.create_pool(dsn, min_size=1, max_size=3)
+    return _pool
+
+
+def _serialize_row(row: asyncpg.Record) -> dict:
+    data = dict(row)
+    for key in ("observed_at", "fetched_at"):
+        if isinstance(data.get(key), datetime):
+            data[key] = data[key].isoformat()
+    return data
 
 
 @app.get("/", response_class=PlainTextResponse)
@@ -16,6 +41,25 @@ async def hello_world() -> str:
 @app.get("/health", response_class=PlainTextResponse)
 async def health() -> str:
     return "ok"
+
+
+@app.get("/api/observations/latest-10")
+async def latest_10_observations() -> list[dict]:
+    try:
+        pool = await get_pool()
+        rows = await pool.fetch(
+            """
+            SELECT id, station_id, observed_at, fetched_at, raw_json,
+                   temp_f, humidity, wind_speed_mph, wind_gust_mph,
+                   pressure_in, precip_rate_in
+            FROM public.pws_observations
+            ORDER BY observed_at DESC
+            LIMIT 10
+            """
+        )
+        return [_serialize_row(r) for r in rows]
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Database query failed: {exc}") from exc
 
 
 # ---------------------------------------------------------------------------
