@@ -4,6 +4,7 @@ main.py  –  FastAPI backend for PWS Weather Dashboard
 
 import os
 import json
+import logging
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 
@@ -21,6 +22,8 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 STATION_ID   = os.getenv("STATION_ID", "KTXSPRIN829")
 
+log = logging.getLogger(__name__)
+
 app = FastAPI(title="PWS Weather Dashboard")
 templates = Jinja2Templates(directory="templates")
 
@@ -34,15 +37,22 @@ _pool: Optional[asyncpg.Pool] = None
 async def get_pool() -> asyncpg.Pool:
     global _pool
     if _pool is None:
-        # asyncpg needs the DSN in postgresql:// format
-        dsn = DATABASE_URL.replace("postgresql://", "postgresql://")
+        if not DATABASE_URL:
+            raise RuntimeError("DATABASE_URL is not set")
+
+        # If sslmode is not specified, default to disable to avoid implicit TLS attempts.
+        dsn = DATABASE_URL if "sslmode=" in DATABASE_URL else f"{DATABASE_URL}?sslmode=disable"
         _pool = await asyncpg.create_pool(dsn, min_size=1, max_size=5)
     return _pool
 
 
 @app.on_event("startup")
 async def startup():
-    await get_pool()
+    # Do not crash the whole app when DB is temporarily unreachable.
+    try:
+        await get_pool()
+    except Exception as exc:
+        log.warning("Database not reachable at startup: %s", exc)
 
 
 @app.on_event("shutdown")
