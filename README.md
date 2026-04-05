@@ -2,6 +2,12 @@
 # PWS Weather Dashboard
 # weather-station-4
 
+## Project Documentation
+
+For complete product, engineering, setup, operations, and FAQ documentation in one place, see:
+
+- [`PROJECT_HANDBOOK.md`](PROJECT_HANDBOOK.md)
+
 Weather-themed FastAPI dashboard for your personal weather station (KTXSPRIN829, Spring TX). This app provides a live, interactive web dashboard with real-time and historical weather data, local rain prediction, and beautiful animated sky visuals. The UI uses a light, sky-inspired theme.
 
 
@@ -45,8 +51,10 @@ crontab -e
 ```
 Add:
 ```
-*/15 * * * * /usr/bin/python3 /path/to/weather-station-4/pws_fetcher.py >> /var/log/pws_fetcher.log 2>&1
+*/15 * * * * sudo /usr/bin/docker exec myweatherstation-my-station-ygoxes.1.7j3320yxewfx5s4pyippnu8x2 python /app/pws_fetcher.py >> /home/newguy/fetch-pws/weather_cron.log 2>&1
 ```
+
+> **Note:** If Dokploy recreates the container, the container name can change. Update the cron line and sudoers rule accordingly. See [`DOKPLOY_CRON_SETUP.md`](DOKPLOY_CRON_SETUP.md) for full setup details.
 
 
 ## API Endpoints
