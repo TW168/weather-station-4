@@ -852,6 +852,14 @@ const FACTOR_META={
   'Absolute Pressure':     {icon:'⬇️',max:10},
   'Solar Radiation Drop':  {icon:'☁️',max:5},
 };
+const FACTOR_ORDER = [
+  'Pressure Trend',
+  'Humidity',
+  'Dew Point Spread',
+  'Current Precipitation',
+  'Absolute Pressure',
+  'Solar Radiation Drop',
+];
 const FACTOR_EXPLAIN={
   'Pressure Trend':{
     strong:'Pressure is dropping fast — a classic sign of an incoming storm system.',
@@ -893,6 +901,13 @@ const FACTOR_EXPLAIN={
 function contribPts(contrib,max){
   return Math.round(({'strong':1,'moderate':0.6,'slight':0.25,'none':0}[contrib]||0)*max);
 }
+function normalizeFactors(factors){
+  const byName = new Map((factors || []).map(f => [f.name, f]));
+  return FACTOR_ORDER.map(name => {
+    if (byName.has(name)) return byName.get(name);
+    return { name, value: 'N/A (insufficient data)', contribution: 'none' };
+  });
+}
 async function loadRainPrediction(){
   try{
     const r=await fetch('/api/rain-prediction');
@@ -909,7 +924,8 @@ async function loadRainPrediction(){
     const confMap={'high':'High Confidence','medium':'Medium Confidence','low':'Low Confidence — limited data'};
     document.getElementById('rain-confidence').textContent=confMap[d.confidence]||d.confidence;
     const fEl=document.getElementById('rain-factors');
-    fEl.innerHTML=d.factors.map(f=>{
+    const factors = normalizeFactors(d.factors);
+    fEl.innerHTML=factors.map(f=>{
       const meta=FACTOR_META[f.name]||{icon:'◦',max:10};
       const pts=contribPts(f.contribution,meta.max);
       const barW=meta.max>0?Math.round((pts/meta.max)*100):0;

@@ -99,7 +99,14 @@ def _empty_result(now: datetime) -> dict:
         "probability": 0,
         "label": "Unlikely",
         "confidence": "low",
-        "factors": [],
+        "factors": [
+            _missing_factor("Pressure Trend"),
+            _missing_factor("Humidity"),
+            _missing_factor("Dew Point Spread"),
+            _missing_factor("Current Precipitation"),
+            _missing_factor("Absolute Pressure"),
+            _missing_factor("Solar Radiation Drop"),
+        ],
         "calculated_at": now.isoformat(),
     }
 
@@ -111,7 +118,7 @@ def _score_pressure_trend(observations: list[dict]) -> tuple[int, dict | None]:
         if o.get("pressure_in") is not None
     ]
     if len(pressures) < 2:
-        return 0, None
+        return 0, _missing_factor("Pressure Trend")
 
     now = pressures[-1][0]
     three_hrs_ago = now - timedelta(hours=3)
@@ -149,7 +156,7 @@ def _score_pressure_trend(observations: list[dict]) -> tuple[int, dict | None]:
 def _score_humidity(latest: dict) -> tuple[int, dict | None]:
     hum = latest.get("humidity")
     if hum is None:
-        return 0, None
+        return 0, _missing_factor("Humidity")
 
     if hum >= 95:
         pts = 20
@@ -175,7 +182,7 @@ def _score_dewpoint_spread(latest: dict) -> tuple[int, dict | None]:
     temp = latest.get("temp_f")
     dewpt = latest.get("dewpt_f")
     if temp is None or dewpt is None:
-        return 0, None
+        return 0, _missing_factor("Dew Point Spread")
 
     spread = temp - dewpt
 
@@ -202,7 +209,7 @@ def _score_dewpoint_spread(latest: dict) -> tuple[int, dict | None]:
 def _score_precipitation(latest: dict) -> tuple[int, dict | None]:
     rate = latest.get("precip_rate_in")
     if rate is None:
-        return 0, None
+        return 0, _missing_factor("Current Precipitation")
 
     if rate >= 0.10:
         pts = 15
@@ -223,7 +230,7 @@ def _score_precipitation(latest: dict) -> tuple[int, dict | None]:
 def _score_absolute_pressure(latest: dict) -> tuple[int, dict | None]:
     pres = latest.get("pressure_in")
     if pres is None:
-        return 0, None
+        return 0, _missing_factor("Absolute Pressure")
 
     if pres < 29.70:
         pts = 10
@@ -244,7 +251,6 @@ def _score_absolute_pressure(latest: dict) -> tuple[int, dict | None]:
 def _score_solar_drop(observations: list[dict]) -> tuple[int, dict | None]:
     now = observations[-1]["observed_at"]
     one_hr_ago = now - timedelta(hours=1)
-    two_hrs_ago = now - timedelta(hours=2)
     three_hrs_ago = now - timedelta(hours=3)
 
     recent = [
@@ -256,29 +262,22 @@ def _score_solar_drop(observations: list[dict]) -> tuple[int, dict | None]:
         o["solar_radiation"]
         for o in observations
         if o.get("solar_radiation") is not None
-        and two_hrs_ago <= o["observed_at"] < three_hrs_ago
-        or o.get("solar_radiation") is not None
-        and three_hrs_ago <= o["observed_at"] < one_hr_ago
-        and o["observed_at"] < one_hr_ago
-    ]
-
-    # Simpler: earlier = readings from 1-3 hours ago
-    earlier = [
-        o["solar_radiation"]
-        for o in observations
-        if o.get("solar_radiation") is not None
         and three_hrs_ago <= o["observed_at"] < one_hr_ago
     ]
 
     if not recent or not earlier:
-        return 0, None
+        return 0, _missing_factor("Solar Radiation Drop")
 
     avg_recent = sum(recent) / len(recent)
     avg_earlier = sum(earlier) / len(earlier)
 
     # Only evaluate during daytime
     if avg_earlier < 50:
-        return 0, None
+        return 0, {
+            "name": "Solar Radiation Drop",
+            "value": "N/A (nighttime)",
+            "contribution": "none",
+        }
 
     drop_pct = ((avg_earlier - avg_recent) / avg_earlier) * 100
 
@@ -307,3 +306,11 @@ def _contribution_label(pts: int, max_pts: int) -> str:
     elif ratio > 0:
         return "slight"
     return "none"
+
+
+def _missing_factor(name: str) -> dict:
+    return {
+        "name": name,
+        "value": "N/A (insufficient data)",
+        "contribution": "none",
+    }
