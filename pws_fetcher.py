@@ -8,6 +8,7 @@ Run via cron:  */15 * * * * /usr/bin/python3 /path/to/pws_fetcher.py
 import os
 import json
 import logging
+import argparse
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -15,7 +16,8 @@ import requests
 import psycopg2
 from dotenv import load_dotenv
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,7 +32,7 @@ TELEGRAM_BOT_TOKEN  = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID    = os.getenv("TELEGRAM_CHAT_ID", "")
 RAIN_ALERT_THRESHOLD = int(os.getenv("RAIN_ALERT_THRESHOLD", "46"))
 
-STATE_FILE = Path(__file__).parent / "rain_alert_state.json"
+STATE_FILE = BASE_DIR / "rain_alert_state.json"
 
 WU_URL = (
     "https://api.weather.com/v2/pws/observations/current"
@@ -119,7 +121,11 @@ def save_observation(obs: dict) -> None:
 def send_telegram(text: str) -> None:
     """Send a message via the Telegram Bot API."""
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        log.warning("Telegram credentials not set — skipping notification.")
+        log.warning(
+            "Telegram credentials not set (token=%s, chat_id=%s) — skipping notification.",
+            bool(TELEGRAM_BOT_TOKEN),
+            bool(TELEGRAM_CHAT_ID),
+        )
         return
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     resp = requests.post(url, json={
@@ -134,10 +140,16 @@ def send_telegram(text: str) -> None:
 def load_alert_state() -> dict:
     if STATE_FILE.exists():
         try:
-            return json.loads(STATE_FILE.read_text())
+            state = json.loads(STATE_FILE.read_text())
+            # Backward compatible with older single-key state format.
+            if "prediction_alerted" not in state:
+                state["prediction_alerted"] = bool(state.get("alerted", False))
+            if "raining_now" not in state:
+                state["raining_now"] = False
+            return state
         except Exception:
             pass
-    return {"alerted": False}
+    return {"prediction_alerted": False, "raining_now": False}
 
 
 def save_alert_state(state: dict) -> None:
@@ -190,11 +202,41 @@ def check_and_alert_rain() -> None:
     label       = result["label"]
     confidence  = result["confidence"]
     factors     = result["factors"]
+    latest = observations[-1] if observations else {}
+    precip_rate = latest.get("precip_rate_in")
+    raining_now = bool(precip_rate and precip_rate > 0)
 
     state = load_alert_state()
-    log.info("Rain prediction: %d%% (%s) — alerted=%s", probability, label, state["alerted"])
+    log.info(
+        "Rain prediction: %d%% (%s) — prediction_alerted=%s raining_now=%s",
+        probability,
+        label,
+        state["prediction_alerted"],
+        state["raining_now"],
+    )
 
-    if probability >= RAIN_ALERT_THRESHOLD and not state["alerted"]:
+    if raining_now and not state["raining_now"]:
+        message = (
+            f"🌧 <b>Rain Started — {STATION_ID}</b>\n\n"
+            f"Current precip rate: <b>{(precip_rate or 0):.2f} in/hr</b>\n"
+            f"Detected by your station at {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
+        )
+        send_telegram(message)
+        state["raining_now"] = True
+        save_alert_state(state)
+
+    elif not raining_now and state["raining_now"]:
+        log.info("Precipitation stopped — clearing rain-start alert state.")
+        state["raining_now"] = False
+        save_alert_state(state)
+    else:
+        log.info(
+            "No rain-start alert sent (raining_now=%s, prior_raining_now=%s).",
+            raining_now,
+            state["raining_now"],
+        )
+
+    if probability >= RAIN_ALERT_THRESHOLD and not state["prediction_alerted"]:
         # Build factor summary lines
         factor_lines = "\n".join(
             f"  {f['name']}: {f['value']}"
@@ -208,21 +250,42 @@ def check_and_alert_rain() -> None:
             f"Confidence: {confidence.title()}"
         )
         send_telegram(message)
-        state["alerted"] = True
+        state["prediction_alerted"] = True
         save_alert_state(state)
 
-    elif probability < RAIN_ALERT_THRESHOLD and state["alerted"]:
+    elif probability < RAIN_ALERT_THRESHOLD and state["prediction_alerted"]:
         # Conditions cleared — reset so the next event triggers a fresh alert
         log.info("Prediction dropped below threshold — resetting alert state.")
-        state["alerted"] = False
+        state["prediction_alerted"] = False
         save_alert_state(state)
+    else:
+        log.info(
+            "No prediction alert sent (probability=%d, threshold=%d, already_alerted=%s).",
+            probability,
+            RAIN_ALERT_THRESHOLD,
+            state["prediction_alerted"],
+        )
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Fetch PWS observations and optionally send Telegram test alert.")
+    parser.add_argument(
+        "--test-telegram",
+        action="store_true",
+        help="Send a test Telegram message and exit.",
+    )
+    args = parser.parse_args()
+
     try:
+        if args.test_telegram:
+            send_telegram(
+                f"✅ Test alert from {STATION_ID} at {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
+            )
+            raise SystemExit(0)
+
         obs = fetch_observation()
         save_observation(obs)
         check_and_alert_rain()
     except Exception as exc:
-        log.error("Fetch/save failed: %s", exc)
+        log.exception("Fetch/save failed: %s", exc)
         raise

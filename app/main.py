@@ -7,6 +7,7 @@ import json
 import logging
 from typing import Optional
 from datetime import datetime, timezone, timedelta
+from contextlib import asynccontextmanager
 
 import asyncpg
 from fastapi import FastAPI, Request, Query, HTTPException
@@ -23,7 +24,6 @@ STATION_ID = os.getenv("STATION_ID", "KTXSPRIN829")
 
 log = logging.getLogger(__name__)
 
-app = FastAPI(title="PWS Weather Dashboard")
 templates = Jinja2Templates(directory="templates")
 
 _pool: Optional[asyncpg.Pool] = None
@@ -46,18 +46,20 @@ async def get_pool() -> asyncpg.Pool:
     return _pool
 
 
-@app.on_event("startup")
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     try:
         await get_pool()
     except Exception as exc:
         log.warning("Database not reachable at startup: %s", exc)
+    try:
+        yield
+    finally:
+        if _pool:
+            await _pool.close()
 
 
-@app.on_event("shutdown")
-async def shutdown():
-    if _pool:
-        await _pool.close()
+app = FastAPI(title="PWS Weather Dashboard", lifespan=lifespan)
 
 
 def _serialize_row(row: asyncpg.Record) -> dict:
