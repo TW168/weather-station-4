@@ -110,7 +110,7 @@ async def api_latest():
         """
         SELECT observed_at, temp_f, humidity, wind_speed_mph, wind_gust_mph,
                pressure_in, precip_rate_in, raw_json
-        FROM pws_observations
+         FROM public.pws_observations
         WHERE station_id = $1
         ORDER BY observed_at DESC
         LIMIT 1
@@ -150,7 +150,7 @@ async def api_history(hours: int = Query(default=24, ge=1, le=168)):
         """
         SELECT observed_at, temp_f, humidity, wind_speed_mph,
                wind_gust_mph, pressure_in, precip_rate_in, raw_json
-        FROM pws_observations
+                FROM public.pws_observations
         WHERE station_id = $1
           AND observed_at >= $2
         ORDER BY observed_at ASC
@@ -200,7 +200,7 @@ async def api_stats(hours: int = Query(default=24, ge=1, le=168)):
             MAX(pressure_in)    AS pres_max,
             SUM(precip_rate_in) AS precip_sum,
             COUNT(*)            AS obs_count
-        FROM pws_observations
+                FROM public.pws_observations
         WHERE station_id = $1
           AND observed_at >= $2
         """,
@@ -219,7 +219,7 @@ async def api_rain_prediction():
         """
         SELECT observed_at, temp_f, humidity, pressure_in,
                precip_rate_in, raw_json
-        FROM pws_observations
+                FROM public.pws_observations
         WHERE station_id = $1
           AND observed_at >= $2
         ORDER BY observed_at ASC

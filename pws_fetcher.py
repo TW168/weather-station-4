@@ -67,7 +67,7 @@ def save_observation(obs: dict) -> None:
         with conn, conn.cursor() as cur:
             # Ensure table exists
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS pws_observations (
+                CREATE TABLE IF NOT EXISTS public.pws_observations (
                     id              BIGSERIAL PRIMARY KEY,
                     station_id      TEXT NOT NULL,
                     observed_at     TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -81,12 +81,12 @@ def save_observation(obs: dict) -> None:
                     precip_rate_in  REAL
                 );
                 CREATE INDEX IF NOT EXISTS idx_pws_obs_station_time
-                    ON pws_observations (station_id, observed_at DESC);
+                    ON public.pws_observations (station_id, observed_at DESC);
             """)
 
             # Avoid duplicate inserts for the same observation timestamp
             cur.execute(
-                "SELECT 1 FROM pws_observations WHERE station_id=%s AND observed_at=%s",
+                "SELECT 1 FROM public.pws_observations WHERE station_id=%s AND observed_at=%s",
                 (STATION_ID, observed_at),
             )
             if cur.fetchone():
@@ -95,7 +95,7 @@ def save_observation(obs: dict) -> None:
 
             cur.execute(
                 """
-                INSERT INTO pws_observations
+                INSERT INTO public.pws_observations
                     (station_id, observed_at, raw_json,
                      temp_f, humidity, wind_speed_mph, wind_gust_mph,
                      pressure_in, precip_rate_in)
@@ -166,7 +166,7 @@ def fetch_recent_observations() -> list[dict]:
                 """
                 SELECT observed_at, temp_f, humidity, pressure_in,
                        precip_rate_in, raw_json
-                FROM pws_observations
+                  FROM public.pws_observations
                 WHERE station_id = %s AND observed_at >= %s
                 ORDER BY observed_at ASC
                 """,
