@@ -9,6 +9,7 @@ import os
 import json
 import logging
 import argparse
+import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -17,6 +18,7 @@ import psycopg2
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(BASE_DIR.parent))
 load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 logging.basicConfig(
