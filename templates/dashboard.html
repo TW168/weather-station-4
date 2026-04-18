@@ -731,13 +731,15 @@ function uvLabel(u){
 }
 
 // ── PRESSURE TREND ────────────────────────────────────────────────────
-let _prevPres = null;
+const _pressureHistory = []; // [{t: Date, p: number}], populated by loadHistory
 function presTrend(p){
-  if(_prevPres===null){_prevPres=p;return'<span class="trend-arrow trend-steady">–</span>'}
-  const diff=p-_prevPres; _prevPres=p;
-  if(diff>0.02)return'<span class="trend-arrow trend-up">↑</span>';
-  if(diff<-0.02)return'<span class="trend-arrow trend-down">↓</span>';
-  return'<span class="trend-arrow trend-steady">–</span>';
+  const threeHrsAgo = new Date(Date.now() - 3*60*60*1000);
+  const window = _pressureHistory.filter(h => h.t >= threeHrsAgo);
+  if(window.length === 0) return '<span class="trend-arrow trend-steady">–</span>';
+  const diff = p - window[0].p;
+  if(diff > 0.02) return '<span class="trend-arrow trend-up">↑</span>';
+  if(diff < -0.02) return '<span class="trend-arrow trend-down">↓</span>';
+  return '<span class="trend-arrow trend-steady">–</span>';
 }
 
 // ── LOAD LATEST ───────────────────────────────────────────────────────
@@ -793,6 +795,8 @@ async function loadHistory(hours=24){
     const r=await fetch(`/api/history?hours=${hours}`);
     if(!r.ok)return;
     const data=await r.json();
+    _pressureHistory.length=0;
+    data.forEach(d=>{ if(d.pressure!=null) _pressureHistory.push({t:new Date(d.t),p:d.pressure}); });
     if(data.length>1) buildCharts(data);
   }catch(e){console.error('history fetch error',e)}
 }
