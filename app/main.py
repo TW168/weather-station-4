@@ -9,6 +9,8 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 from contextlib import asynccontextmanager
 
+import asyncio
+
 import asyncpg
 from fastapi import FastAPI, Request, Query, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
@@ -245,3 +247,133 @@ async def api_rain_prediction():
         )
 
     return predict_rain(observations)
+
+
+def _run_backtest(all_obs: list[dict], threshold: int) -> dict:
+    PREDICT_HORIZON = timedelta(hours=4)
+    OBS_WINDOW = timedelta(hours=6)
+    STEP = timedelta(minutes=30)
+
+    if not all_obs:
+        return {"error": "No observations found"}
+
+    first_t = all_obs[0]["observed_at"]
+    last_t  = all_obs[-1]["observed_at"]
+    eval_start = first_t + OBS_WINDOW
+    eval_end   = last_t  - PREDICT_HORIZON
+
+    if eval_start >= eval_end:
+        return {"error": "Not enough history — need at least 10 hours of data"}
+
+    results = []
+    t = eval_start
+    while t <= eval_end:
+        window_start = t - OBS_WINDOW
+        window = [o for o in all_obs if window_start <= o["observed_at"] <= t]
+        if len(window) >= 2:
+            pred = predict_rain(window)
+            end_t = t + PREDICT_HORIZON
+            actual_rain = any(
+                o.get("precip_rate_in") and o["precip_rate_in"] > 0
+                for o in all_obs
+                if t < o["observed_at"] <= end_t
+            )
+            results.append({
+                "probability": pred["probability"],
+                "label": pred["label"],
+                "actual_rain": actual_rain,
+            })
+        t += STEP
+
+    total = len(results)
+    if total == 0:
+        return {"error": "No evaluation points generated"}
+
+    rain_events = sum(1 for r in results if r["actual_rain"])
+    predicted_rain    = [r for r in results if r["probability"] >= threshold]
+    predicted_no_rain = [r for r in results if r["probability"] <  threshold]
+    tp = sum(1 for r in predicted_rain    if     r["actual_rain"])
+    fp = sum(1 for r in predicted_rain    if not r["actual_rain"])
+    fn = sum(1 for r in predicted_no_rain if     r["actual_rain"])
+    tn = sum(1 for r in predicted_no_rain if not r["actual_rain"])
+    precision = tp / (tp + fp) if (tp + fp) else 0
+    recall    = tp / (tp + fn) if (tp + fn) else 0
+    f1        = 2 * precision * recall / (precision + recall) if (precision + recall) else 0
+    accuracy  = (tp + tn) / total if total else 0
+
+    buckets: dict[int, dict] = {}
+    for r in results:
+        b = (r["probability"] // 10) * 10
+        if b not in buckets:
+            buckets[b] = {"count": 0, "actual_rain": 0}
+        buckets[b]["count"] += 1
+        if r["actual_rain"]:
+            buckets[b]["actual_rain"] += 1
+
+    calibration = [
+        {
+            "bucket_low": b,
+            "predictions": buckets[b]["count"],
+            "actual_rain": buckets[b]["actual_rain"],
+            "actual_rate": round(buckets[b]["actual_rain"] / buckets[b]["count"] * 100, 1),
+        }
+        for b in sorted(buckets)
+    ]
+
+    return {
+        "eval_count":   total,
+        "rain_events":  rain_events,
+        "rain_rate_pct": round(rain_events / total * 100, 1),
+        "threshold":    threshold,
+        "date_from":    first_t.isoformat(),
+        "date_to":      last_t.isoformat(),
+        "confusion":    {"tp": tp, "fp": fp, "fn": fn, "tn": tn},
+        "metrics": {
+            "accuracy":  round(accuracy  * 100, 1),
+            "precision": round(precision * 100, 1),
+            "recall":    round(recall    * 100, 1),
+            "f1":        round(f1        * 100, 1),
+        },
+        "calibration": calibration,
+    }
+
+
+@app.get("/api/backtest")
+async def api_backtest(
+    days:      int = Query(default=30, ge=7,  le=365),
+    threshold: int = Query(default=46, ge=1,  le=99),
+):
+    pool = await get_pool()
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+
+    rows = await pool.fetch(
+        """
+        SELECT observed_at, temp_f, humidity, pressure_in,
+               precip_rate_in, raw_json
+          FROM public.pws_observations
+         WHERE station_id = $1
+           AND observed_at >= $2
+         ORDER BY observed_at ASC
+        """,
+        STATION_ID,
+        since,
+    )
+
+    all_obs = []
+    for r in rows:
+        raw = json.loads(r["raw_json"])
+        imp = raw.get("imperial", {})
+        all_obs.append({
+            "observed_at":    r["observed_at"],
+            "temp_f":         r["temp_f"],
+            "humidity":       r["humidity"],
+            "pressure_in":    r["pressure_in"],
+            "precip_rate_in": r["precip_rate_in"],
+            "dewpt_f":        imp.get("dewpt"),
+            "solar_radiation": raw.get("solarRadiation"),
+        })
+
+    result = await asyncio.get_event_loop().run_in_executor(
+        None, lambda: _run_backtest(all_obs, threshold)
+    )
+    return result

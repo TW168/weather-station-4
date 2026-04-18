@@ -335,6 +335,69 @@ header{
 .stat-val{font-family:var(--font-cond);font-size:36px;font-weight:600;color:var(--text)}
 .stat-unit{font-size:17px;color:var(--text-muted)}
 
+/* ── BACKTEST ────────────────────────────────────────────────────────── */
+.backtest-card{
+  background:rgba(255,255,255,0.88);
+  border:1px solid rgba(29,127,189,0.2);
+  border-radius:var(--r);padding:28px;margin-bottom:20px;
+  box-shadow:0 4px 20px rgba(29,127,189,.1);
+}
+.backtest-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.backtest-title{font-family:var(--font-mono);font-size:13px;letter-spacing:.15em;color:var(--text-muted);text-transform:uppercase}
+.backtest-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.bt-days-btn{
+  font-family:var(--font-mono);font-size:13px;padding:6px 14px;
+  border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.7);
+  color:var(--text-muted);cursor:pointer;transition:.2s;letter-spacing:.06em;
+}
+.bt-days-btn:hover{border-color:var(--accent);color:var(--accent)}
+.bt-days-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.bt-threshold{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:13px;color:var(--text-muted)}
+.bt-threshold input{
+  width:56px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);
+  font-family:var(--font-mono);font-size:13px;color:var(--text);
+  background:rgba(255,255,255,0.9);text-align:center;
+}
+.bt-run-btn{
+  font-family:var(--font-mono);font-size:13px;padding:7px 20px;
+  border-radius:6px;border:none;background:var(--accent);color:#fff;
+  cursor:pointer;letter-spacing:.08em;font-weight:700;transition:.2s;
+}
+.bt-run-btn:hover{background:var(--accent2)}
+.bt-run-btn:disabled{opacity:.5;cursor:not-allowed}
+.backtest-body{display:none}
+.backtest-body.visible{display:block}
+.bt-meta{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);margin-bottom:20px}
+.bt-metrics-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;
+}
+@media(max-width:700px){.bt-metrics-grid{grid-template-columns:repeat(2,1fr)}}
+.bt-metric{
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  padding:14px 16px;text-align:center;
+}
+.bt-metric-val{font-family:var(--font-cond);font-size:42px;font-weight:700;color:var(--text);line-height:1}
+.bt-metric-lbl{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase;margin-top:4px}
+.bt-confusion{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px;max-width:380px}
+.bt-confusion-cell{
+  padding:10px 14px;border-radius:8px;
+  font-family:var(--font-mono);font-size:13px;
+}
+.bt-confusion-cell.tp{background:rgba(5,150,105,.12);border:1px solid rgba(5,150,105,.25)}
+.bt-confusion-cell.tn{background:rgba(29,127,189,.10);border:1px solid rgba(29,127,189,.2)}
+.bt-confusion-cell.fp{background:rgba(217,119,6,.12);border:1px solid rgba(217,119,6,.25)}
+.bt-confusion-cell.fn{background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.25)}
+.bt-confusion-n{font-size:22px;font-weight:700;color:var(--text)}
+.bt-confusion-l{font-size:11px;color:var(--text-muted);margin-top:2px}
+.bt-section-title{font-family:var(--font-mono);font-size:12px;letter-spacing:.12em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px}
+.bt-cal-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-family:var(--font-mono);font-size:12px}
+.bt-cal-label{width:68px;color:var(--text-muted);text-align:right;flex-shrink:0}
+.bt-cal-bar-bg{flex:1;height:18px;background:rgba(29,127,189,.1);border-radius:4px;overflow:hidden;position:relative}
+.bt-cal-bar-predicted{height:100%;border-radius:4px;background:rgba(29,127,189,.25);position:absolute;top:0;left:0}
+.bt-cal-bar-actual{height:100%;border-radius:4px;background:#1d7fbd;position:absolute;top:0;left:0;transition:width .8s ease}
+.bt-cal-counts{width:90px;color:var(--text-dim);flex-shrink:0}
+.bt-empty{font-family:var(--font-mono);font-size:14px;color:var(--text-muted);padding:20px 0}
+
 /* ── FOOTER ──────────────────────────────────────────────────────────── */
 footer{
   text-align:center;padding-top:24px;border-top:1px solid var(--border);
@@ -553,6 +616,33 @@ footer{
       </div>
     </div>
   </section>
+
+  <!-- ── BACKTEST ── -->
+  <div class="backtest-card">
+    <div class="backtest-header">
+      <div class="backtest-title">🎯 Prediction Accuracy Backtest</div>
+      <div class="backtest-controls">
+        <button type="button" class="bt-days-btn active" data-days="30">30 days</button>
+        <button type="button" class="bt-days-btn" data-days="60">60 days</button>
+        <button type="button" class="bt-days-btn" data-days="90">90 days</button>
+        <div class="bt-threshold">
+          threshold <input type="number" id="bt-threshold" value="46" min="1" max="99"/>%
+        </div>
+        <button type="button" class="bt-run-btn" id="bt-run">Run</button>
+      </div>
+    </div>
+    <div class="backtest-body" id="bt-body">
+      <div class="bt-meta" id="bt-meta"></div>
+      <div class="bt-metrics-grid" id="bt-metrics"></div>
+      <div class="bt-section-title" style="margin-bottom:8px">Confusion Matrix</div>
+      <div class="bt-confusion" id="bt-confusion" style="margin-bottom:24px"></div>
+      <div class="bt-section-title">Calibration — does stated probability match actual rain rate?</div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-bottom:10px">
+        Light bar = share of predictions in that bucket &nbsp;·&nbsp; Dark bar = actual rain rate
+      </div>
+      <div id="bt-calibration"></div>
+    </div>
+  </div>
 
   <footer>
     PWS Observer · {{ station_id }} · Spring, TX &nbsp;|&nbsp;
@@ -946,6 +1036,75 @@ async function loadRainPrediction(){
       </div>`;
     }).join('');
   }catch(e){console.warn('Rain prediction error',e)}
+}
+
+// ── BACKTEST ──────────────────────────────────────────────────────────
+let _btDays = 30;
+
+document.querySelectorAll('.bt-days-btn').forEach(btn => {
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.bt-days-btn').forEach(b=>{ b.classList.remove('active'); });
+    this.classList.add('active');
+    _btDays = parseInt(this.dataset.days, 10);
+  });
+});
+
+document.getElementById('bt-run').addEventListener('click', runBacktest);
+
+async function runBacktest(){
+  const runBtn = document.getElementById('bt-run');
+  runBtn.disabled = true;
+  runBtn.textContent = 'Running…';
+  document.getElementById('bt-body').classList.remove('visible');
+  try{
+    const threshold = parseInt(document.getElementById('bt-threshold').value, 10) || 46;
+    const r = await fetch(`/api/backtest?days=${_btDays}&threshold=${threshold}`);
+    const d = await r.json();
+    if(d.error){ alert(d.error); return; }
+    renderBacktest(d);
+    document.getElementById('bt-body').classList.add('visible');
+  }catch(e){ console.error('backtest error',e); alert('Backtest failed — check console'); }
+  finally{ runBtn.disabled=false; runBtn.textContent='Run'; }
+}
+
+function renderBacktest(d){
+  const fmt = (v,dec=1) => v!=null ? Number(v).toFixed(dec) : '--';
+  const from = new Date(d.date_from).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  const to   = new Date(d.date_to).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  document.getElementById('bt-meta').textContent =
+    `${d.eval_count} evaluation points · ${from} – ${to} · rain occurred ${d.rain_rate_pct}% of windows · threshold ${d.threshold}%`;
+
+  const m = d.metrics;
+  document.getElementById('bt-metrics').innerHTML = [
+    {val: fmt(m.accuracy),  lbl: 'Accuracy'},
+    {val: fmt(m.precision), lbl: 'Precision'},
+    {val: fmt(m.recall),    lbl: 'Recall'},
+    {val: fmt(m.f1),        lbl: 'F1 Score'},
+  ].map(x=>`<div class="bt-metric">
+    <div class="bt-metric-val">${x.val}<span style="font-size:20px;color:var(--text-muted)">%</span></div>
+    <div class="bt-metric-lbl">${x.lbl}</div>
+  </div>`).join('');
+
+  const c = d.confusion;
+  document.getElementById('bt-confusion').innerHTML = `
+    <div class="bt-confusion-cell tp"><div class="bt-confusion-n">${c.tp}</div><div class="bt-confusion-l">True Positives<br>predicted rain ✓</div></div>
+    <div class="bt-confusion-cell fp"><div class="bt-confusion-n">${c.fp}</div><div class="bt-confusion-l">False Positives<br>predicted rain ✗</div></div>
+    <div class="bt-confusion-cell fn"><div class="bt-confusion-n">${c.fn}</div><div class="bt-confusion-l">False Negatives<br>missed rain</div></div>
+    <div class="bt-confusion-cell tn"><div class="bt-confusion-n">${c.tn}</div><div class="bt-confusion-l">True Negatives<br>correctly clear ✓</div></div>`;
+
+  const maxPredictions = Math.max(...d.calibration.map(b=>b.predictions), 1);
+  document.getElementById('bt-calibration').innerHTML = d.calibration.map(b=>{
+    const predW = Math.round(b.predictions / maxPredictions * 100);
+    const actW  = Math.round(b.actual_rate);
+    return `<div class="bt-cal-row">
+      <div class="bt-cal-label">${b.bucket_low}–${b.bucket_low+9}%</div>
+      <div class="bt-cal-bar-bg">
+        <div class="bt-cal-bar-predicted" style="width:${predW}%"></div>
+        <div class="bt-cal-bar-actual"    style="width:${actW}%"></div>
+      </div>
+      <div class="bt-cal-counts">${b.actual_rain}/${b.predictions} rained</div>
+    </div>`;
+  }).join('');
 }
 
 // ── INIT & POLL ───────────────────────────────────────────────────────
