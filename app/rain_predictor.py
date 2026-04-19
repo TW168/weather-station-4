@@ -67,6 +67,12 @@ def predict(observations: list[dict]) -> dict:
     if factor:
         factors.append(factor)
 
+    # Factor 7: Humidity trend (max 10 pts)
+    pts, factor = _score_humidity_trend(observations)
+    score += pts
+    if factor:
+        factors.append(factor)
+
     score = max(0, min(100, score))
 
     if score <= 20:
@@ -132,15 +138,15 @@ def _score_pressure_trend(observations: list[dict]) -> tuple[int, dict | None]:
     newest_p = window[-1][1]
     drop = oldest_p - newest_p  # positive = pressure fell
 
-    if drop >= 0.12:
+    if drop >= 0.08:
         pts = 30
-    elif drop >= 0.08:
-        pts = 24
     elif drop >= 0.05:
-        pts = 18
+        pts = 24
     elif drop >= 0.03:
+        pts = 18
+    elif drop >= 0.02:
         pts = 12
-    elif drop >= 0.01:
+    elif drop >= 0.005:
         pts = 5
     else:
         pts = 0
@@ -294,6 +300,36 @@ def _score_solar_drop(observations: list[dict]) -> tuple[int, dict | None]:
         "name": "Solar Radiation Drop",
         "value": f"{drop_pct:.0f}%",
         "contribution": _contribution_label(pts, 5),
+    }
+
+
+def _score_humidity_trend(observations: list[dict]) -> tuple[int, dict | None]:
+    now = observations[-1]["observed_at"]
+    two_hrs_ago = now - timedelta(hours=2)
+
+    recent = [o["humidity"] for o in observations if o.get("humidity") is not None and o["observed_at"] >= two_hrs_ago]
+    earlier = [o["humidity"] for o in observations if o.get("humidity") is not None and o["observed_at"] < two_hrs_ago]
+
+    if not recent or not earlier:
+        return 0, _missing_factor("Humidity Trend")
+
+    rise = (sum(recent) / len(recent)) - (sum(earlier) / len(earlier))
+
+    if rise >= 10:
+        pts = 10
+    elif rise >= 6:
+        pts = 7
+    elif rise >= 3:
+        pts = 4
+    elif rise >= 1:
+        pts = 2
+    else:
+        pts = 0
+
+    return pts, {
+        "name": "Humidity Trend",
+        "value": f"{rise:+.1f}% over 2hr",
+        "contribution": _contribution_label(pts, 10),
     }
 
 
