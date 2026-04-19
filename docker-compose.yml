@@ -9,15 +9,3 @@ services:
     env_file: .env
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
-  # ── Rain alert cron ────────────────────────────────────────────────────────
-  cron:
-    build: .
-    restart: unless-stopped
-    env_file: .env
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    command: >
-      bash -c "apt-get update -qq && apt-get install -y -qq cron &&
-               crontab /app/crontab &&
-               cron -f"
